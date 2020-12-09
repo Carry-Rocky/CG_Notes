@@ -1,0 +1,77 @@
+For someone who want to know how LookAt matrix is computed in glm, I'll just make a explaination here.
+
+If we rotate camera around axis n by angle θ , it looks like objects in world space are rotated around axis n by angle -θ.
+
+If rotation axis n is (Rx, Ry, Rz) and angle is θ, then the rotation matrix A is 
+
+| cosθ+RxRx(1−cosθ)      RyRx(1−cosθ)+Rzsinθ    RzRx(1−cosθ)−Rysinθ     0 |  
+| RxRy(1−cosθ)−Rzsinθ    cosθ+RyRy(1−cosθ)      RzRy(1−cosθ)+Rxsinθ     0 |
+| RxRz(1−cosθ)+Rysinθ    RyRz(1−cosθ)−Rxsinθ    cosθ+RzRz(1−cosθ)       0 |
+| 0                      0                      0                       1 |
+
+For looking in a more clear way, let's denote the above matrix as
+
+| R11   R12     R13     0 |
+| R21   R22     R23     0 |
+| R31   R32     R33     0 |
+| 0     0       0       1 |
+
+If we change rotation angle to -θ and keep the rotation axis n the same, then the rotation matrix would be
+
+| cos(-θ)+RxRx(1−cos(-θ))      RyRx(1−cos(-θ))+Rzsin(-θ)    RzRx(1−cos(-θ))−Rysin(-θ)     0 |  
+| RxRy(1−cos(-θ))−Rzsin(-θ)    cos(-θ)+RyRy(1−cos(-θ))      RzRy(1−cos(-θ))+Rxsin(-θ)     0 |
+| RxRz(1−cos(-θ))+Rysin(-θ)    RyRz(1−cos(-θ))−Rxsin(-θ)    cos(-θ)+RzRz(1−cos(-θ))       0 |
+| 0                            0                            0                             1 |
+
+Since cos(-θ) = cosθ and sin(-θ) = -sin(θ), the above matrix is the same as
+
+| cosθ+RxRx(1−cosθ)      RyRx(1−cosθ)-Rzsinθ    RzRx(1−cosθ)+Rysinθ     0 |  
+| RxRy(1−cosθ)+Rzsinθ    cosθ+RyRy(1−cosθ)      RzRy(1−cosθ)-Rxsinθ     0 |
+| RxRz(1−cosθ)-Rysinθ    RyRz(1−cosθ)+Rxsinθ    cosθ+RzRz(1−cosθ)       0 |
+| 0                      0                      0                       1 |
+
+and we call it matrix B
+
+Now we can see that matrix B is actually the transpose of matrix A, so we can denote Matrix B as
+
+| R11   R21     R31     0 |
+| R12   R22     R32     0 |
+| R13   R23     R33     0 |
+| 0     0       0       1 |
+
+Next step let's see how can we compute R11 to R33 out using camera's data.
+
+Suppose our camera is positioning at the origin and looking towards negative z axis, the unit vector of direction vector is [0, 0, -1]. We can also know that the camera's right vector is [1, 0, 0], up vector is [0, 1, 0].
+
+After the rotation around axis n by angle θ, let's say our new direction, right and up vectors are [dx, dy, dz], [rx, ry, rz] and [ux, uy, uz].
+
+We know that we can get [dx, dy, dz] from multiplying rotation matrix A and [0, 0, -1], that's
+
+| R11   R12     R13     0 |   | 0  |   | dx |
+| R21   R22     R23     0 | * | 0  | = | dy |
+| R31   R32     R33     0 |   | -1 |   | dz |
+| 0     0       0       1 |   | 1  |   | 1  |
+
+So dx = -R13, dy = -R23, dz = -R33 after matrix multiplication. Then R13 = -dx, R23 = -dy, R33 = -dz.
+
+Now we get 3 elemet of matrix B. Let's use the same way by multiplying matrix A with [0, 1, 0] and [1, 0, 0] separately to get [ux, uy, uz] and [rx, ry, rz]. 
+
+After the computation R11 = rx, R21 = ry, R31 = rz, R12 = ux, R22 = uy and R32 = uz.
+
+So matrix B equals to
+
+| rx    ry      rz     0 |
+| ux    uy      uz     0 |
+| -dx   -dy     -dz    0 |
+| 0     0       0      1 |
+
+For objects transformation in model space, we would do rotation first then translation. But camera or view space transformation is the reverse of model space, so we will do translation first then rotation. 
+
+If our camera's position vector p is [px, py, pz], then LookAt matrix is
+
+| rx    ry      rz     0 |   | 1    0   0   -px |   | rx    ry      rz      -rx * px - ry * py - rz * pz | 
+| ux    uy      uz     0 | * | 0    1   0   -py | = | ux    uy      uz      -ux * px - uy * py - uz * pz |
+| -dx   -dy     -dz    0 |   | 0    0   1   -pz |   | -dx   -dy     -dz      dx * px + dy * py + dz * pz | 
+| 0     0       0      1 |   | 0    0   0   1   |   | 0     0       0        1                           |
+
+The last column of the above matrix is actually [-r ⋅ p, -u ⋅ p, d ⋅ p, 1].
