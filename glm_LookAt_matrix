@@ -1,4 +1,4 @@
-For someone who want to know how LookAt matrix is computed in glm, I'll just make a explaination here.
+For anyone who wants to know how LookAt matrix is computed in glm, I'll just make a explanation here.
 
 If we rotate camera around axis n by angle θ , it looks like objects in world space are rotated around axis n by angle -θ.
 
