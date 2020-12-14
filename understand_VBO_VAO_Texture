@@ -1,0 +1,143 @@
+If you are new to openGL programming, you may be suffering a hard time try to understand vertex buffer object(VBO), vertext array object(VAO) and texture. I also got confused to these stuffs when I first saw those functions. After spending some days searching online I could imagine what those objects would be like inside openGL. I don't know what exactly openGL function is implemented behind the scene, but I can help you imagine what it would be like inside of it for your better understanding.
+
+I think it's straight forward to learn them function by function, so let's begin.
+
+1. glGenBuffers
+If you want to create a buffer objet, you may need to run such code:
+	
+	int VBO;
+	glGenBuffers(1, &VBO);
+
+but what openGL is doing in this function?
+Imagine there's an array to store buffer objects in openGL acting like a buffer pool, such as
+	
+	bufferObject bufferPool[MaxBufferPoolSize];
+
+and openGL is recording an index about what's the next available buffer pool slot to be allocated, we can name it bufferPoolIndex
+	
+	int bufferPoolIndex;
+
+When we want to generate a buffer, a new bufferObject would be created and stored in the bufferPoolIndex slot of the pool then returning bufferPoolIndex to users. The code inside of glGenBuffers maybe like:
+	
+	void genBuffer(int& bufferIndex) 
+	{
+		bufferIndex = bufferPoolIndex;
+		bufferPool[bufferIndex] = bufferObject();
+	}
+
+So glGenBuffers is a function for creating buffer objects and returning the pool index of these objects back.
+Let's continue our imagination.
+	
+2. glBindBuffer and GL_ARRAY_BUFFER
+You can imagine GL_ARRAY_BUFFER as a global pointer which is pointing to a bufferObject as we mentioned above.
+	
+	bufferObject* arrayBuffer;
+
+What glBindBuffer's work is to let arrayBuffer point to the address of a buffer object. The code inside glBindBuffer may work as
+	
+	void bindBuffer(int bufferIndex)
+	{
+		arrayBuffer = &bufferPool[bufferIndex];
+	}
+
+GL_ARRAY_BUFFER's name may make programmer who's new to openGL feel confused. They may think there are lots of array buffers in openGL, but there's only one. 
+If you've understood what I've explained so far, let's keep going on to the next function.
+
+3. glBufferData
+To understand what's inside this function, let's first see what the bufferObject data structure would be like.
+bufferObject should contain some properties in it, but for better understanding the concept of openGL as a beginner, let's say it contains only two properties: verticesSize and the data copy of vertices.
+	
+	struct bufferObject
+	{
+		int verticesSize;
+		float verticesCopy[MaxVerticesSize];
+	}
+
+Vertices are an array of data stored in the main memory, VBO copies the vertices data from the main memory to the memory in GPU for VAO to read data from VBO faster later.
+So glBufferData would be working like this:
+	
+	void bufferData(int size, float* data)
+	{
+		arrayBuffer->verticesSize = size;
+		clearVerticesCopy();
+		for (int i = 0; i < size; i++)
+		{
+			arrayBuffer->verticesCopy[i] = data[i];
+		}
+	}
+
+Now we've seen what VBO would be like, next let's see what VAO is and what's the connection between VBO and VAO.
+
+4. glGenVertexArrays
+Like buffer pool, there's also a vertex array pool in openGL. Something like:
+
+	vertexArrayObject vertexArrayPool[MaxVertexArrayPoolSize];
+
+so like genBuffer, glGenVertexArrays would work like this:
+	
+	void genVertexArray(int& vertexArrayIndex) 
+	{
+		vertexArrayIndex = vertexArrayPoolIndex;
+		vertexArrayPool[vertexArrayIndex] = vertexArrayObject();
+	}
+
+where vertexArrayPoolIndex is the next availe slot in vertexArrayPool can be allocated.
+
+5. glBindVertexArray
+Like arrayBuffer, there's also a global vertex array buffer in openGL which is a pointer points to a vertexArrayObject.
+So inside glBindVertexArray it would be like:
+	
+	void bindVertexArray(int vertexArrayIndex)
+	{
+		vertexArrayBuffer = &vertexArrayPool[vertexArrayIndex];
+	}
+
+Next let's see the important step, copying data from VBO to VAO.
+
+6. glVertexAttribPointer and glEnableVertexAttribArray
+Each vertexArrayObject contains 16 slots for the storage of different attributes in a vertex. So properties inside of vertexArrayObject may contain at least these stuff:
+	
+	struct vertexArrayObject
+	{
+		vertexAttribute vertexAttributeArray[16];
+	}
+
+where vertexAttribute is one of the attribute data in a vertex and it may look like:
+	
+	struct vertexAttribute
+	{
+		float attributes[MaxAttributeSize];
+		bool enabled;
+	}
+
+attributes is an array for storaging some vertices data from VBO's verticesCopy. So VAO needs to read data from VBO to get the particular data it wants. And it's implemented in glVertexAttribPointer, it may work like:
+
+	void vertexAttributePointer(int attributeIndex, int dataLength, int stride, int startIndex)
+	{
+		int index = 0;
+		clearAttribute(attributeIndex);
+		for (int i = startIndex; i < arrayBuffer->verticesSize; i = i + stride)
+		{
+			for (int j = i; j < i + dataLength; j++)
+			{
+				vertexArrayBuffer->vertexAttributeArray[attributeIndex].attributes[index] = arrayBuffer->verticesCopy[j];
+				index++;
+			}
+		}
+	}
+
+Now, VAO has got the data for each attribute from VBO. Since the vertices data has been stored inside VAO as different attributes, we can safely delete VBO's data if we want. Before we use VAO's data for shader, we need to enable the attribute by index through glEnableVertexAttribArray, like:
+
+	vertexArrayBuffer->vertexAttributeArray[attributeIndex].enabled = true;
+
+I've met some programmer's who're new in openGL programming thought VBO is inside VAO. That's absolutely wrong, VBO and VAO are two independent objects existing in GPU, but VAO will get data from the VBO which GL_ARRAY_BUFFER is currently binding with.
+
+Thus, we've seen what VAO and VBO looks like, may my explanation will help you understand them better.
+
+In the end I would like to talk little bit of texture. Texture is a little bit different from VAO and VBO, for VAO and VBO there's only one buffer pointer points to the current binding objects. But for texture, there are 16 texture buffer objects, each contains some texture buffer pointers, such as Texture2D, Texture3D. There is a global currently active texture buffer object index indicating which buffer object is active now.
+
+So glActiveTexture would change the currently active texture buffer to the parameter one. And glBindTexture would do someting like:
+	
+	textureBuffer[activeBufferIndex].texture2D = &texturePool[textureIndex];
+
+If any of my explanation is wrong please contact me through: zihangzhang0923@gmail.com. Thank you.
