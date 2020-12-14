@@ -141,3 +141,8 @@ So glActiveTexture would change the currently active texture buffer to the param
 	textureBuffer[activeBufferIndex].texture2D = &texturePool[textureIndex];
 
 If any of my explanation is wrong please contact me through: zihangzhang0923@gmail.com. Thank you.
+
+Reference:
+https://learnopengl.com/Getting-started/Hello-Triangle
+https://stackoverflow.com/questions/14802854/what-does-the-gl-array-buffer-target-mean-in-glbindbuffer#:~:text=The%20GL_ARRAY_BUFFER%20target%20for%20buffer,object%20for%20vertex%20attribute%20data.
+https://stackoverflow.com/questions/8866904/differences-and-relationship-between-glactivetexture-and-glbindtexture
